@@ -341,6 +341,27 @@ import url from 'node:url';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const toAbsolute = (p) => path.resolve(__dirname, p);
+// ---------- AUTO-TERMINATE (NEW) ----------
+/**
+ * Auto-terminate the prerender process if it runs longer than the limit.
+ * Default: 60000 ms (1 minute). Override with PRERENDER_TIMEOUT_MS env var.
+ */
+const AUTO_TERMINATE_MS = Number(process.env.PRERENDER_TIMEOUT_MS ?? 60000);
+let _autoKillTimer = setTimeout(() => {
+  console.error(`[prerender] auto-terminate: time limit reached (${AUTO_TERMINATE_MS}ms). Forcing exit.`);
+  // Use non-zero exit code to indicate timeout failure
+  process.exit(1);
+}, AUTO_TERMINATE_MS);
+
+// keep a helper to cancel the timer when work completes
+function clearAutoTerminate() {
+  if (_autoKillTimer) {
+    clearTimeout(_autoKillTimer);
+    _autoKillTimer = null;
+    console.log('[prerender] auto-terminate cleared');
+  }
+}
+// -----------------------------------------
 
 // --------- Storage polyfills ----------
 if (typeof globalThis.localStorage === 'undefined') {
@@ -539,21 +560,52 @@ const routesToPrerender = fs
     return name === 'index' ? '/' : `/${name}`;
   });
 
+// // --------- prerender loop ----------
+// (async () => {
+//   for (const routeUrl of routesToPrerender) {
+//     try {
+//       const appHtml = await (typeof renderFn === 'function' ? renderFn(routeUrl) : renderFn);
+//       const html = template.replace('<!--app-html-->', String(appHtml ?? ''));
+//       const outFile = routeUrl === '/' ? '/index.html' : `${routeUrl}.html`;
+//       const filePath = `dist${outFile}`;
+//       const absPath = toAbsolute(filePath);
+//       fs.mkdirSync(path.dirname(absPath), { recursive: true });
+//       fs.writeFileSync(absPath, html, 'utf-8');
+//       console.log('pre-rendered:', filePath);
+//     } catch (err) {
+//       console.error(`pre-render failed for route "${routeUrl}":`, err);
+//     }
+//   }
+//   console.log('[prerender] done');
+// })()
+
+
+
 // --------- prerender loop ----------
 (async () => {
-  for (const routeUrl of routesToPrerender) {
-    try {
-      const appHtml = await (typeof renderFn === 'function' ? renderFn(routeUrl) : renderFn);
-      const html = template.replace('<!--app-html-->', String(appHtml ?? ''));
-      const outFile = routeUrl === '/' ? '/index.html' : `${routeUrl}.html`;
-      const filePath = `dist${outFile}`;
-      const absPath = toAbsolute(filePath);
-      fs.mkdirSync(path.dirname(absPath), { recursive: true });
-      fs.writeFileSync(absPath, html, 'utf-8');
-      console.log('pre-rendered:', filePath);
-    } catch (err) {
-      console.error(`pre-render failed for route "${routeUrl}":`, err);
+  try {
+    for (const routeUrl of routesToPrerender) {
+      try {
+        const appHtml = await (typeof renderFn === 'function' ? renderFn(routeUrl) : renderFn);
+        const html = template.replace('<!--app-html-->', String(appHtml ?? ''));
+        const outFile = routeUrl === '/' ? '/index.html' : `${routeUrl}.html`;
+        const filePath = `dist${outFile}`;
+        const absPath = toAbsolute(filePath);
+        fs.mkdirSync(path.dirname(absPath), { recursive: true });
+        fs.writeFileSync(absPath, html, 'utf-8');
+        console.log('pre-rendered:', filePath);
+      } catch (err) {
+        console.error(`pre-render failed for route "${routeUrl}":`, err);
+      }
     }
+    console.log('[prerender] done');
+
+    // finished successfully — cancel auto-terminate and exit cleanly
+    clearAutoTerminate();
+    process.exit(0);
+  } catch (err) {
+    console.error('[prerender] Unexpected error in prerender loop:', err);
+    clearAutoTerminate();
+    process.exit(1);
   }
-  console.log('[prerender] done');
-})()
+})();
