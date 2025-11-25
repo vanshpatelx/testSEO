@@ -1,0 +1,21 @@
+{
+  "name": "HighRiskHomeowners.com - Insurance Specialists",
+  "short_name": "HighRiskHomeowners",
+  "description": "Connect with licensed insurance specialists for high-risk properties. Free referrals for coastal, wildfire, and challenging properties.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "lifestyle"],
+  "lang": "en-US",
+  "dir": "ltr"
+}
