@@ -27,6 +27,9 @@ const { render } = await import('./dist/server/entry-server.js')
 let blogPosts = []
 let glossaryTerms = []
 let videoPages = []
+let states = []
+let coastalStates = []
+let wildfireStates = []
 
 try {
   // Try to import from the server build
@@ -38,6 +41,15 @@ try {
 
   const videoModule = await import('./src/data/videoPages.ts')
   videoPages = videoModule.VIDEO_PAGES || []
+
+  const statesModule = await import('./src/data/states.ts')
+  states = statesModule.STATES || []
+
+  const coastalModule = await import('./src/data/coastalStates.ts')
+  coastalStates = coastalModule.COASTAL_STATES || []
+
+  const wildfireModule = await import('./src/data/wildfireStates.ts')
+  wildfireStates = wildfireModule.WILDFIRE_STATES || []
 } catch (error) {
   console.warn('Warning: Could not import data files:', error.message)
 }
@@ -63,19 +75,37 @@ const glossaryRoutes = glossaryTerms
 const videoRoutes = videoPages
   .map(video => `/video-library/${video.slug}`)
 
+// State-specific routes
+const stateRoutes = states
+  .map(state => `/${state.slug}-high-risk-home-insurance`)
+
+// Coastal insurance state routes
+const coastalRoutes = coastalStates
+  .map(state => `/coastal-insurance/${state.slug}`)
+
+// Wildfire insurance state routes
+const wildfireRoutes = wildfireStates
+  .map(state => `/wildfire-insurance/${state.slug}`)
+
 // Combine all routes
 const allRoutes = [
   ...staticRoutes,
   ...blogRoutes,
   ...glossaryRoutes,
-  ...videoRoutes
+  ...videoRoutes,
+  ...stateRoutes,
+  ...coastalRoutes,
+  ...wildfireRoutes
 ]
 
 console.log(`\n🎨 Pre-rendering ${allRoutes.length} routes...`)
 console.log(`   - ${staticRoutes.length} static pages`)
 console.log(`   - ${blogRoutes.length} blog posts`)
 console.log(`   - ${glossaryRoutes.length} glossary terms`)
-console.log(`   - ${videoRoutes.length} video pages\n`)
+console.log(`   - ${videoRoutes.length} video pages`)
+console.log(`   - ${stateRoutes.length} state pages`)
+console.log(`   - ${coastalRoutes.length} coastal insurance pages`)
+console.log(`   - ${wildfireRoutes.length} wildfire insurance pages\n`)
 
   ; (async () => {
     let successCount = 0
